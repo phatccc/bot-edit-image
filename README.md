@@ -1,59 +1,83 @@
-# PUBG Mobile Showcase Generator
+# Game Account Showcase Generator
 
-Web app tự động biến ảnh chụp giao diện acc PUBG Mobile thành ảnh showcase/poster đẹp mắt.
+Web app tự động phân tích và biến đổi ảnh chụp màn hình giao diện tài khoản game thành những tấm ảnh showcase/poster cực chất và chuyên nghiệp.
 
-## Tech Stack
-
-- **Backend**: FastAPI + OpenCV + Pillow
+## Công nghệ sử dụng
+- **Backend**: FastAPI + Python (OpenCV + Pillow để xử lý hình ảnh)
 - **Frontend**: React + Vite
-- **Image Processing**: Rule-based cropping (ratio-based) + poster composition
+- **Tính năng chính**: Nhận diện khung hình, cắt lọc vật phẩm theo tỷ lệ thông minh và ghép vào template poster ấn tượng. Có tích hợp công cụ tùy chỉnh vùng cắt (Crop) thủ công trực tiếp trên web.
 
-## Cấu trúc
+## Yêu cầu hệ thống
+- Máy tính cần cài đặt sẵn **Python 3.9+** và **Node.js (npm)**.
 
-```
-Edit-Image-Web/
-├── backend/           # FastAPI server
-│   ├── main.py        # Entry point
-│   ├── schemas.py     # Pydantic models
-│   ├── routes/        # API endpoints
-│   ├── services/      # Image processing
-│   └── templates/     # Layout configs
-├── frontend/          # React app
-│   └── src/
-│       ├── pages/     # Upload, Preview, Result
-│       └── api.js     # API client
-└── README.md
-```
+---
 
-## Chạy local
+## Hướng dẫn cài đặt và chạy Local
 
-### 1. Backend
+Ứng dụng chia làm 2 phần độc lập: **Backend** (xử lý ảnh) và **Frontend** (giao diện người dùng). Bạn cần mở 2 cửa sổ Terminal để chạy song song cả 2 phần này.
+
+### Bước 1: Khởi chạy Backend (Server xử lý)
+
+Mở Terminal / Command Prompt và gõ lần lượt các lệnh sau:
 
 ```bash
+# 1. Đi tới thư mục backend
 cd backend
+
+# 2. Tạo môi trường ảo để cài thư viện
 python3 -m venv venv
+
+# 3. Kích hoạt môi trường ảo
+# - Nếu dùng Mac/Linux:
 source venv/bin/activate
+# - Nếu dùng Windows:
+# venv\Scripts\activate
+
+# 4. Cài đặt các thư viện cần thiết
 pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+
+# 5. Khởi chạy server FastAPI
+uvicorn main:app --reload --port 8000 --host 127.0.0.1
 ```
+*(Backend sẽ chạy tại địa chỉ `http://127.0.0.1:8000`. Bạn có thể để cửa sổ này tự chạy và mở một cửa sổ khác cho Frontend)*
 
-Backend sẽ chạy tại: http://localhost:8000  
-API docs: http://localhost:8000/docs
+### Bước 2: Khởi chạy Frontend (Giao diện API)
 
-### 2. Frontend
+Mở một cửa sổ Terminal **MỚI** (vẫn giữ cửa sổ cũ đang chạy Backend) và gõ:
 
 ```bash
+# 1. Đi tới thư mục frontend
 cd frontend
+
+# 2. Cài đặt package của React
 npm install
+
+# 3. Chạy giao diện web
 npm run dev
 ```
 
-Frontend sẽ chạy tại: http://localhost:5173
+### Bước 3: Sử dụng ứng dụng
 
-### 3. Sử dụng
+1. Mở trình duyệt và truy cập vào địa chỉ **`http://localhost:5173`**
+2. Upload (Tải lên) 1 hoặc nhiều ảnh chụp màn hình kho đồ trong game của bạn.
+3. Chọn chế độ cắt (Trang phục hoặc Vũ khí...) và dùng thanh trượt để tinh chỉnh khung cắt nếu cần.
+4. Xem trước ảnh (Preview) và nhấn **Tạo Showcase**.
+5. Tải xuống thành phẩm từng tấm hoặc tải hàng loạt bằng file `.ZIP`.
 
-1. Mở http://localhost:5173
-2. Upload 1 hoặc nhiều ảnh chụp màn hình PUBG Mobile
-3. Preview ảnh → chọn template → click "Tạo Showcase"
-4. Xem kết quả → Download từng ảnh hoặc tất cả (ZIP)
-# bot-edit-image
+---
+
+## Cấu trúc thư mục
+
+```text
+Edit-Image-Web/
+├── backend/           # Server FastAPI (Python)
+│   ├── main.py        # Điểm khởi chạy backend
+│   ├── schemas.py     # Định nghĩa dữ liệu (Pydantic)
+│   ├── routes/        # Các API Endpoint
+│   ├── services/      # Xử lý hình ảnh lõi (Cắt, ghép, áp filter)
+│   └── templates/     # Chứa config Json định vị Layout ghép ảnh
+└── frontend/          # Ứng dụng React
+    └── src/
+        ├── pages/     # Giao diện từng bước (Upload, CropType, Preview, Result)
+        └── api.js     # Hàm chuẩn bị dữ liệu gửi lên Backend
+```

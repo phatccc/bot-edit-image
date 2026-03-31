@@ -2,9 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   clearSavedGrid,
+  DEFAULT_HELMET_PRESET_ID,
   DEFAULT_OUTFIT_PRESET_ID,
+  DEFAULT_WEAPON_PRESET_ID,
+  HELMET_GRID_PRESETS,
   OUTFIT_GRID_PRESETS,
+  WEAPON_GRID_PRESETS,
   getDefaultGridForCropType,
+  getHelmetPresetById,
   loadSavedGrid,
   saveGrid,
 } from '../constants/cropPresets';
@@ -42,16 +47,36 @@ export default function CropTypePage({
   setCropType,
   outfitPreset = DEFAULT_OUTFIT_PRESET_ID,
   setOutfitPreset,
+  weaponPreset = DEFAULT_WEAPON_PRESET_ID,
+  setWeaponPreset,
+  helmetPreset = DEFAULT_HELMET_PRESET_ID,
+  setHelmetPreset,
   customGrid,
   setCustomGrid
 }) {
   const navigate = useNavigate();
-  const getActivePresetId = (typeId = cropType, presetId = outfitPreset) =>
-    typeId === 'outfit' ? presetId : DEFAULT_OUTFIT_PRESET_ID;
-  const resolveInitialGrid = (typeId = cropType, presetId = outfitPreset) =>
+  const getActivePresetId = (
+    typeId = cropType,
+    outfitPresetId = outfitPreset,
+    weaponPresetId = weaponPreset,
+    helmetPresetId = helmetPreset
+  ) =>
+    typeId === 'outfit'
+      ? outfitPresetId
+      : typeId === 'weapon'
+        ? weaponPresetId
+        : typeId === 'helmet'
+          ? helmetPresetId
+          : DEFAULT_OUTFIT_PRESET_ID;
+  const resolveInitialGrid = (
+    typeId = cropType,
+    outfitPresetId = outfitPreset,
+    weaponPresetId = weaponPreset,
+    helmetPresetId = helmetPreset
+  ) =>
     customGrid ||
-    loadSavedGrid(typeId, getActivePresetId(typeId, presetId)) ||
-    getDefaultGridForCropType(typeId, presetId);
+    loadSavedGrid(typeId, outfitPresetId, weaponPresetId, helmetPresetId) ||
+    getDefaultGridForCropType(typeId, outfitPresetId, weaponPresetId, helmetPresetId);
   const [showAdjust, setShowAdjust] = useState(false);
   const [grid, setGrid] = useState(resolveInitialGrid());
 
@@ -68,37 +93,52 @@ export default function CropTypePage({
 
   const handleSelect = (typeId) => {
     setCropType(typeId);
-    const nextGrid = resolveInitialGrid(typeId, outfitPreset);
-    setCustomGrid(loadSavedGrid(typeId, getActivePresetId(typeId, outfitPreset)));
+    const nextGrid = resolveInitialGrid(typeId, outfitPreset, weaponPreset, helmetPreset);
+    setCustomGrid(loadSavedGrid(typeId, outfitPreset, weaponPreset, helmetPreset));
     setGrid(nextGrid);
   };
 
   const handleOutfitPresetChange = (presetId) => {
     setOutfitPreset(presetId);
-    const savedGrid = loadSavedGrid('outfit', presetId);
+    const savedGrid = loadSavedGrid('outfit', presetId, weaponPreset);
     setCustomGrid(savedGrid);
-    setGrid(savedGrid || getDefaultGridForCropType('outfit', presetId));
+    setGrid(savedGrid || getDefaultGridForCropType('outfit', presetId, weaponPreset));
+  };
+
+  const handleWeaponPresetChange = (presetId) => {
+    setWeaponPreset(presetId);
+    const savedGrid = loadSavedGrid('weapon', outfitPreset, presetId, helmetPreset);
+    setCustomGrid(savedGrid);
+    setGrid(savedGrid || getDefaultGridForCropType('weapon', outfitPreset, presetId, helmetPreset));
+  };
+
+  const handleHelmetPresetChange = (presetId) => {
+    setHelmetPreset(presetId);
+    const savedGrid = loadSavedGrid('helmet', outfitPreset, weaponPreset, presetId);
+    setCustomGrid(savedGrid);
+    setGrid(savedGrid || getDefaultGridForCropType('helmet', outfitPreset, weaponPreset, presetId));
   };
 
   const handleContinue = () => {
-    const savedGrid = loadSavedGrid(cropType, getActivePresetId());
-    setCustomGrid(showAdjust || savedGrid ? grid : null);
+    const savedGrid = loadSavedGrid(cropType, outfitPreset, weaponPreset, helmetPreset);
+    const shouldUseGrid = cropType === 'weapon' || cropType === 'helmet' || showAdjust || savedGrid;
+    setCustomGrid(shouldUseGrid ? grid : null);
     navigate('/preview');
   };
 
   const handleSaveGrid = () => {
-    saveGrid(cropType, grid, getActivePresetId());
+    saveGrid(cropType, grid, outfitPreset, weaponPreset, helmetPreset);
     setCustomGrid(grid);
   };
 
   const handleResetGrid = () => {
-    clearSavedGrid(cropType, getActivePresetId());
-    const nextGrid = getDefaultGridForCropType(cropType, outfitPreset);
+    clearSavedGrid(cropType, outfitPreset, weaponPreset, helmetPreset);
+    const nextGrid = getDefaultGridForCropType(cropType, outfitPreset, weaponPreset, helmetPreset);
     setGrid(nextGrid);
     setCustomGrid(null);
   };
 
-  const hasSavedGrid = Boolean(loadSavedGrid(cropType, getActivePresetId()));
+  const hasSavedGrid = Boolean(loadSavedGrid(cropType, outfitPreset, weaponPreset, helmetPreset));
 
   const sampleImageStr = `http://localhost:8000/uploads/${uploadedFiles[0].filename}`;
 
@@ -188,6 +228,100 @@ export default function CropTypePage({
           </div>
         </div>
       )}
+
+      {cropType === 'weapon' && (
+        <div style={{ marginTop: '2rem' }}>
+          <h3 style={{ marginBottom: '0.75rem', textAlign: 'center' }}>Preset cắt súng</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem', textAlign: 'center' }}>
+            Giữ nguyên preset cũ và thêm một preset mới cho màn hình kho súng / ngoại trang.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+            {WEAPON_GRID_PRESETS.map((preset) => {
+              const selected = weaponPreset === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => handleWeaponPresetChange(preset.id)}
+                  style={{
+                    textAlign: 'left',
+                    padding: '1rem 1.1rem',
+                    borderRadius: '1rem',
+                    border: selected ? '2px solid #00d68f' : '1px solid var(--border)',
+                    background: selected ? 'rgba(0, 214, 143, 0.12)' : 'var(--bg-card)',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer',
+                    boxShadow: selected ? '0 0 0 1px rgba(0, 214, 143, 0.2)' : 'none',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', marginBottom: '0.45rem' }}>
+                    <strong>{preset.title}</strong>
+                    <span style={{
+                      fontSize: '0.75rem',
+                      padding: '0.2rem 0.55rem',
+                      borderRadius: '999px',
+                      background: selected ? '#00d68f' : 'rgba(255,255,255,0.08)',
+                      color: selected ? '#111' : 'var(--text-secondary)',
+                    }}>
+                      {preset.subtitle}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                    {preset.description}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {cropType === 'helmet' && (
+        <div style={{ marginTop: '2rem' }}>
+          <h3 style={{ marginBottom: '0.75rem', textAlign: 'center' }}>Preset cắt mũ</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem', textAlign: 'center' }}>
+            Chọn preset mũ theo thiết bị: Điện thoại (4 hàng) hoặc iPad (5 hàng).
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+            {HELMET_GRID_PRESETS.map((preset) => {
+              const selected = helmetPreset === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => handleHelmetPresetChange(preset.id)}
+                  style={{
+                    textAlign: 'left',
+                    padding: '1rem 1.1rem',
+                    borderRadius: '1rem',
+                    border: selected ? '2px solid #52c41a' : '1px solid var(--border)',
+                    background: selected ? 'rgba(82, 196, 26, 0.12)' : 'var(--bg-card)',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer',
+                    boxShadow: selected ? '0 0 0 1px rgba(82, 196, 26, 0.2)' : 'none',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', marginBottom: '0.45rem' }}>
+                    <strong>{preset.title}</strong>
+                    <span style={{
+                      fontSize: '0.75rem',
+                      padding: '0.2rem 0.55rem',
+                      borderRadius: '999px',
+                      background: selected ? '#52c41a' : 'rgba(255,255,255,0.08)',
+                      color: selected ? '#111' : 'var(--text-secondary)',
+                    }}>
+                      {preset.subtitle}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                    {preset.description}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
       
       <div style={{ marginTop: '2rem', textAlign: 'center' }}>
         <button 
@@ -206,9 +340,15 @@ export default function CropTypePage({
             Kéo các thanh trượt bên dưới để khoanh vùng chính xác danh sách đồ bên phải.
           </p>
 
+          {cropType === 'weapon' && (
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '1rem', textAlign: 'center' }}>
+              Với súng, bạn chỉ cần chọn 1 ô súng mẫu. Hệ thống sẽ tự quét hết các ô súng còn lại trong cùng cột. Preset hiện tại: <strong>{WEAPON_GRID_PRESETS.find((preset) => preset.id === weaponPreset)?.title}</strong>
+            </p>
+          )}
+
           {(cropType === 'outfit' || cropType === 'helmet') && (
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '1rem', textAlign: 'center' }}>
-              Preset hiện tại: <strong>{cropType === 'outfit' ? OUTFIT_GRID_PRESETS.find((preset) => preset.id === outfitPreset)?.title : 'Mũ 4 hàng'}</strong>
+              Preset hiện tại: <strong>{cropType === 'outfit' ? OUTFIT_GRID_PRESETS.find((preset) => preset.id === outfitPreset)?.title : getHelmetPresetById(helmetPreset).title}</strong>
             </p>
           )}
 
@@ -277,6 +417,13 @@ export default function CropTypePage({
             <span className="crop-type-selected-label">
               Preset: <strong style={{ color: '#ff8c00' }}>
                 {OUTFIT_GRID_PRESETS.find((preset) => preset.id === outfitPreset)?.title}
+              </strong>
+            </span>
+          )}
+          {cropType === 'helmet' && (
+            <span className="crop-type-selected-label">
+              Preset: <strong style={{ color: '#52c41a' }}>
+                {getHelmetPresetById(helmetPreset).title}
               </strong>
             </span>
           )}

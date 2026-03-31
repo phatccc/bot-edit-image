@@ -15,7 +15,7 @@
           "x_ratio": 0.61,
           "y_ratio": 0.22,
           "w_ratio": 0.26,
-          "h_ratio": 0.62
+          "h_ratio": 0.63
         },
         "grid": {
           "x_ratio": 0.0,
@@ -30,7 +30,7 @@
           "x_ratio": 0.57,
           "y_ratio": 0.16,
           "w_ratio": 0.32,
-          "h_ratio": 0.75
+          "h_ratio": 0.79
         },
         "grid": {
           "x_ratio": 0.0,
@@ -43,10 +43,10 @@
     "helmet_landscape_focus": {
       "min_aspect_ratio": 1.2,
       "panel": {
-        "x_ratio": 0.61,
-        "y_ratio": 0.15,
-        "w_ratio": 0.26,
-        "h_ratio": 0.84
+        "x_ratio": 0.57,
+        "y_ratio": 0.11,
+        "w_ratio": 0.32,
+        "h_ratio": 0.80
       },
       "grid": {
         "x_ratio": 0.0,
@@ -120,21 +120,21 @@
       "description": "Màn hình skin súng",
       "regions": {
         "character": {
-          "x_ratio": 0.20,
-          "y_ratio": 0.20,
-          "w_ratio": 0.50,
-          "h_ratio": 0.60
+          "x_ratio": 0.69,
+          "y_ratio": 0.12,
+          "w_ratio": 0.25,
+          "h_ratio": 0.12
         },
         "inventory_grid": {
-          "x_ratio": 0.74,
-          "y_ratio": 0.13,
+          "x_ratio": 0.69,
+          "y_ratio": 0.12,
           "w_ratio": 0.25,
-          "h_ratio": 0.85
+          "h_ratio": 0.12
         }
       },
       "grid": {
         "cols": 1,
-        "rows": 5,
+        "rows": 8,
         "padding_ratio": 0.01
       }
     },
@@ -142,16 +142,16 @@
       "description": "Màn hình mũ / helmet PUBG Mobile",
       "regions": {
         "character": {
-          "x_ratio": 0.61,
-          "y_ratio": 0.15,
-          "w_ratio": 0.26,
-          "h_ratio": 0.84
+          "x_ratio": 0.57,
+          "y_ratio": 0.11,
+          "w_ratio": 0.32,
+          "h_ratio": 0.80
         },
         "inventory_grid": {
-          "x_ratio": 0.61,
-          "y_ratio": 0.15,
-          "w_ratio": 0.26,
-          "h_ratio": 0.84
+          "x_ratio": 0.57,
+          "y_ratio": 0.11,
+          "w_ratio": 0.32,
+          "h_ratio": 0.80
         }
       },
       "grid": {
@@ -163,13 +163,28 @@
   },
   "poster_layout": {
     "outfit_single_image_only": true,
+    "weapon_single_image_only": false,
+    "weapon_items_only": true,
     "character": {
-      "x": 120,
+      "x": 20,
       "y": 20,
-      "width": 960,
+      "width": 1160,
       "height": 1520,
+      "right_padding": 20,
+      "bottom_padding": 20,
       "border_radius": 0,
       "border_color": [255, 165, 0],
+      "border_width": 0
+    },
+    "weapon_character": {
+      "x": 20,
+      "y": 20,
+      "width": 700,
+      "height": 1520,
+      "right_padding": 20,
+      "bottom_padding": 20,
+      "border_radius": 0,
+      "border_color": [0, 214, 143],
       "border_width": 0
     },
     "inventory_items": {
@@ -185,13 +200,15 @@
       "border_width": 0
     },
     "weapon_items": {
-      "start_x": 330,
-      "start_y": 180,
-      "item_width": 540,
-      "item_height": 190,
+      "start_x": 20,
+      "start_y": 20,
+      "item_width": 700,
+      "item_height": 150,
       "cols": 1,
-      "rows": 5,
-      "gap": 20,
+      "rows": 6,
+      "gap": 14,
+      "right_padding": 20,
+      "bottom_padding": 20,
       "border_radius": 0,
       "border_color": [0, 214, 143],
       "border_width": 0

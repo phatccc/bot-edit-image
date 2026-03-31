@@ -5,7 +5,11 @@ import CropTypePage from './pages/CropTypePage';
 import PreviewPage from './pages/PreviewPage';
 import ResultPage from './pages/ResultPage';
 import { useState } from 'react';
-import { DEFAULT_OUTFIT_PRESET_ID } from './constants/cropPresets';
+import {
+  DEFAULT_HELMET_PRESET_ID,
+  DEFAULT_OUTFIT_PRESET_ID,
+  DEFAULT_WEAPON_PRESET_ID,
+} from './constants/cropPresets';
 
 function NavBar({ uploadedFiles, outputs, cropType }) {
   const location = useLocation();
@@ -67,6 +71,8 @@ export default function App() {
   const [outputs, setOutputs] = useState([]);
   const [cropType, setCropType] = useState('outfit');
   const [outfitPreset, setOutfitPreset] = useState(DEFAULT_OUTFIT_PRESET_ID);
+  const [weaponPreset, setWeaponPreset] = useState(DEFAULT_WEAPON_PRESET_ID);
+  const [helmetPreset, setHelmetPreset] = useState(DEFAULT_HELMET_PRESET_ID);
   const [customGrid, setCustomGrid] = useState(null);
 
   return (
@@ -88,6 +94,10 @@ export default function App() {
                   setCropType={setCropType}
                   outfitPreset={outfitPreset}
                   setOutfitPreset={setOutfitPreset}
+                  weaponPreset={weaponPreset}
+                  setWeaponPreset={setWeaponPreset}
+                  helmetPreset={helmetPreset}
+                  setHelmetPreset={setHelmetPreset}
                   customGrid={customGrid}
                   setCustomGrid={setCustomGrid}
                 />
@@ -101,13 +111,15 @@ export default function App() {
                   setOutputs={setOutputs}
                   cropType={cropType}
                   outfitPreset={outfitPreset}
+                  weaponPreset={weaponPreset}
+                  helmetPreset={helmetPreset}
                   customGrid={customGrid}
                 />
               }
             />
             <Route
               path="/result"
-              element={<ResultPage outputs={outputs} />}
+              element={<ResultPage outputs={outputs} cropType={cropType} />}
             />
           </Routes>
         </main>

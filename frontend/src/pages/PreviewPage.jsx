@@ -2,8 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { processImages, getTemplates } from '../api';
 import {
+  DEFAULT_HELMET_PRESET_ID,
   DEFAULT_OUTFIT_PRESET_ID,
+  getHelmetPresetById,
   getOutfitPresetById,
+  DEFAULT_WEAPON_PRESET_ID,
+  getWeaponPresetById,
 } from '../constants/cropPresets';
 
 export default function PreviewPage({
@@ -11,6 +15,8 @@ export default function PreviewPage({
   setOutputs,
   cropType = 'outfit',
   outfitPreset = DEFAULT_OUTFIT_PRESET_ID,
+  weaponPreset = DEFAULT_WEAPON_PRESET_ID,
+  helmetPreset = DEFAULT_HELMET_PRESET_ID,
   customGrid = null
 }) {
   const [processing, setProcessing] = useState(false);
@@ -115,6 +121,16 @@ export default function PreviewPage({
           {cropType === 'outfit' && (
             <span className="crop-type-selected-label">
               Preset outfit: <strong style={{ color: '#ff8c00' }}>{getOutfitPresetById(outfitPreset).title}</strong>
+            </span>
+          )}
+          {cropType === 'weapon' && (
+            <span className="crop-type-selected-label">
+              Preset súng: <strong style={{ color: '#00d68f' }}>{getWeaponPresetById(weaponPreset).title}</strong>
+            </span>
+          )}
+          {cropType === 'helmet' && (
+            <span className="crop-type-selected-label">
+              Preset mũ: <strong style={{ color: '#52c41a' }}>{getHelmetPresetById(helmetPreset).title}</strong>
             </span>
           )}
           <div className="template-select">

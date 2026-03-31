@@ -7,6 +7,22 @@ const api = axios.create({
   timeout: 120000,
 });
 
+export function resolveApiUrl(path) {
+  if (!path) {
+    return path;
+  }
+
+  if (/^https?:\/\//i.test(path) || path.startsWith('data:')) {
+    return path;
+  }
+
+  if (/^https?:\/\//i.test(apiBaseUrl)) {
+    return new URL(path, apiBaseUrl).toString();
+  }
+
+  return path;
+}
+
 export async function uploadImages(files) {
   const formData = new FormData();
   files.forEach((file) => {

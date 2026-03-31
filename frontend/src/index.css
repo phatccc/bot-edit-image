@@ -532,14 +532,20 @@ body::before {
    ======================================== */
 .result-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 1rem;
   margin-top: 1.5rem;
 }
 
+.result-grid-wrapper {
+  position: relative;
+  user-select: none;
+}
+
 .result-card {
+  position: relative;
   background: var(--bg-card);
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   border: 1px solid var(--border);
   overflow: hidden;
   transition: var(--transition);
@@ -549,6 +555,17 @@ body::before {
   border-color: var(--border-accent);
   box-shadow: var(--shadow-glow);
   transform: translateY(-3px);
+}
+
+.result-card.selected {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent),
+    0 10px 30px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.result-card-media {
+  position: relative;
 }
 
 .result-card img {
@@ -562,28 +579,167 @@ body::before {
   opacity: 0.9;
 }
 
-.result-card-footer {
-  padding: 1rem 1.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-top: 1px solid var(--border);
-}
-
-.result-card-name {
-  font-size: 0.82rem;
+.result-card-select {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  z-index: 3;
+  height: 36px;
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(10, 10, 20, 0.74);
   color: var(--text-secondary);
-  font-family: var(--font-mono);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 180px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+  backdrop-filter: blur(10px);
 }
 
-.result-card-source {
-  font-size: 0.72rem;
+.result-card-select:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--text-primary);
+}
+
+.result-card-select.selected {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 28%, #1a1022), color-mix(in srgb, var(--accent-light) 18%, #120d1c));
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.result-image-hitbox {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.result-card-download {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 3;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(10, 10, 20, 0.74);
+  color: #fff;
+  cursor: pointer;
+  transition: var(--transition);
+  backdrop-filter: blur(10px);
+}
+
+.result-card-download:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  transform: translateY(-1px);
+}
+
+.result-selection-marquee {
+  position: absolute;
+  z-index: 5;
+  border: 1px dashed color-mix(in srgb, var(--accent) 70%, #fff);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  pointer-events: none;
+  border-radius: 10px;
+}
+
+.result-selection-bar {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg-card) 94%, #0d0a17);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+}
+
+.result-selection-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.result-selection-hint {
+  margin-top: 0.75rem;
+  font-size: 0.82rem;
   color: var(--text-muted);
-  margin-top: 2px;
+}
+
+.weapon-card-editor {
+  padding: 0.75rem 0.75rem 0.65rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-card) 92%, #140f22);
+}
+
+.weapon-card-editor-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.weapon-card-editor-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.weapon-level-input {
+  width: 100%;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  padding: 0 0.7rem;
+  font-size: 0.82rem;
+  outline: none;
+  transition: var(--transition);
+}
+
+.weapon-level-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.15);
+}
+
+.weapon-pk-group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.weapon-pk-button {
+  height: 36px;
+  width: 100%;
+  padding: 0 0.35rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.weapon-pk-button:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  color: var(--text-primary);
+}
+
+.weapon-pk-button.active {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 /* ========================================
@@ -668,7 +824,7 @@ body::before {
   max-width: 90vw;
   max-height: 90vh;
   object-fit: contain;
-  border-radius: var(--radius-md);
+  border-radius: 0;
   box-shadow: var(--shadow-lg);
 }
 
@@ -877,6 +1033,22 @@ body::before {
 /* ========================================
    Responsive
    ======================================== */
+@media (max-width: 1800px) {
+  .result-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1440px) {
+  .result-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1200px) {
+  .result-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (max-width: 992px) {
+  .result-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
 @media (max-width: 768px) {
   .nav { padding: 0 1rem; }
   .nav-inner { height: 56px; }
@@ -888,4 +1060,7 @@ body::before {
   .actions-bar { flex-direction: column; align-items: stretch; }
   .btn-group { justify-content: center; }
   .crop-type-grid { grid-template-columns: 1fr; }
+  .result-selection-actions { flex-direction: column; }
+  .weapon-card-editor-grid { grid-template-columns: 1fr; }
+  .weapon-pk-group { grid-template-columns: 1fr; }
 }

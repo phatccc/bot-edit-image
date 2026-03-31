@@ -1,4 +1,4 @@
-from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps, ImageEnhance
 import numpy as np
 import cv2
 from typing import List, Dict, Any, Optional, Tuple
@@ -106,6 +106,21 @@ def add_glow_effect(image: Image.Image, color: Tuple[int, int, int] = (255, 165,
     return canvas
 
 
+def enhance_display_image(image: Image.Image, crop_type: str) -> Image.Image:
+    """Apply mild display tuning for specific crop types."""
+    if crop_type == "weapon":
+        bgr = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+        hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV).astype(np.float32)
+        hsv[:, :, 1] = np.clip(hsv[:, :, 1] * 1.16, 0, 255)
+        hsv[:, :, 2] = np.clip(hsv[:, :, 2] * 1.04, 0, 255)
+        tuned = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2RGB)
+        image = Image.fromarray(tuned)
+        image = ImageEnhance.Color(image).enhance(1.06)
+        image = ImageEnhance.Contrast(image).enhance(1.08)
+        image = ImageEnhance.Sharpness(image).enhance(1.08)
+    return image
+
+
 def get_font(size: int = 24) -> ImageFont.FreeTypeFont:
     """Get a font, falling back to default if custom font not available."""
     font_paths = [
@@ -143,11 +158,28 @@ def compose_showcase(crops: Dict[str, Any], template: dict,
     out_w = template["output_width"]
     out_h = template["output_height"]
     bg_config = template["background"]
-    single_image_only = crop_type in {"outfit", "helmet"} and layout.get("outfit_single_image_only", False)
+    weapon_items_only = crop_type == "weapon" and layout.get("weapon_items_only", False)
+    single_image_only = (
+        crop_type in {"outfit", "helmet"} and layout.get("outfit_single_image_only", False)
+    ) or (
+        crop_type == "weapon" and layout.get("weapon_single_image_only", False)
+    )
+
+    if weapon_items_only and inventory_items:
+        inv_config = layout["weapon_items"]
+        max_items = inv_config["cols"] * inv_config["rows"]
+        item_count = min(len(inventory_items), max_items)
+        out_w = inv_config["start_x"] + inv_config["item_width"] + inv_config.get("right_padding", inv_config["start_x"])
+        out_h = (
+            inv_config["start_y"]
+            + item_count * inv_config["item_height"]
+            + max(0, item_count - 1) * inv_config["gap"]
+            + inv_config.get("bottom_padding", inv_config["start_y"])
+        )
 
     prepared_character = None
     char_config = None
-    if "character" in crops and crop_type != "weapon":
+    if "character" in crops and not weapon_items_only:
         if crop_type == "weapon" and "weapon_character" in layout:
             char_config = layout["weapon_character"]
         else:
@@ -176,6 +208,7 @@ def compose_showcase(crops: Dict[str, Any], template: dict,
         )
 
         if single_image_only:
+            out_w = char_config["x"] + prepared_character.width + char_config.get("right_padding", char_config["x"])
             out_h = char_config["y"] + prepared_character.height + char_config.get("bottom_padding", 20)
     
     # Create gradient background
@@ -195,7 +228,9 @@ def compose_showcase(crops: Dict[str, Any], template: dict,
     
     # === Place Character / Main Model ===
     if prepared_character is not None and char_config is not None:
-        paste_x = char_config["x"] + max(0, (char_config["width"] - prepared_character.width) // 2)
+        paste_x = char_config["x"]
+        if not single_image_only:
+            paste_x += max(0, (char_config["width"] - prepared_character.width) // 2)
         poster.paste(prepared_character, (paste_x, char_config["y"]),
                      prepared_character if prepared_character.mode == "RGBA" else None)
     
@@ -217,12 +252,25 @@ def compose_showcase(crops: Dict[str, Any], template: dict,
             y = inv_config["start_y"] + row * (inv_config["item_height"] + inv_config["gap"])
             
             item_pil = cv2_to_pil(item_cv)
-            item_pil = ImageOps.fit(
-                item_pil,
-                (inv_config["item_width"], inv_config["item_height"]),
-                method=Image.Resampling.LANCZOS,
-                centering=(0.5, 0.5)
-            )
+            item_pil = enhance_display_image(item_pil, crop_type)
+            if crop_type == "weapon":
+                contained = ImageOps.contain(
+                    item_pil,
+                    (inv_config["item_width"], inv_config["item_height"]),
+                    method=Image.Resampling.LANCZOS,
+                )
+                framed = Image.new("RGB", (inv_config["item_width"], inv_config["item_height"]), (18, 18, 28))
+                paste_x = (inv_config["item_width"] - contained.width) // 2
+                paste_y = (inv_config["item_height"] - contained.height) // 2
+                framed.paste(contained, (paste_x, paste_y))
+                item_pil = framed
+            else:
+                item_pil = ImageOps.fit(
+                    item_pil,
+                    (inv_config["item_width"], inv_config["item_height"]),
+                    method=Image.Resampling.LANCZOS,
+                    centering=(0.5, 0.5)
+                )
             
             bordered_item = add_rounded_border(
                 item_pil,
