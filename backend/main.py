@@ -3,16 +3,27 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from fastapi.staticfiles import StaticFiles
 import os
+from pathlib import Path
 
 from routes.upload import router as upload_router
 from routes.process import router as process_router
 
 
+BASE_DIR = Path(__file__).resolve().parent
+UPLOAD_DIR = BASE_DIR / "uploads"
+OUTPUT_DIR = BASE_DIR / "outputs"
+
+# StaticFiles validates directories at import time, so ensure they exist
+# before mounting when the app boots on Render.
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Create required directories on startup."""
-    os.makedirs("uploads", exist_ok=True)
-    os.makedirs("outputs", exist_ok=True)
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     yield
 
 
@@ -49,8 +60,8 @@ app.include_router(upload_router)
 app.include_router(process_router)
 
 # Mount static directories
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
-app.mount("/outputs", StaticFiles(directory="outputs"), name="outputs")
+app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+app.mount("/outputs", StaticFiles(directory=str(OUTPUT_DIR)), name="outputs")
 
 
 @app.get("/")

@@ -52,7 +52,11 @@ export default function UploadPage({ uploadedFiles, setUploadedFiles }) {
       setUploadProgress(30);
       const result = await uploadImages(localFiles);
       setUploadProgress(100);
-      setUploadedFiles(result.files);
+      const filesWithPreview = (result.files || []).map((file, index) => ({
+        ...file,
+        preview_url: localFiles[index] ? URL.createObjectURL(localFiles[index]) : null,
+      }));
+      setUploadedFiles(filesWithPreview);
       
       setTimeout(() => {
         navigate('/crop-type');

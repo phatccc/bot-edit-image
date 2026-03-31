@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { processImages, getTemplates } from '../api';
+import { processImages, getTemplates, resolveApiUrl } from '../api';
 import {
   DEFAULT_HELMET_PRESET_ID,
   DEFAULT_OUTFIT_PRESET_ID,
@@ -102,7 +102,7 @@ export default function PreviewPage({
       <div className="preview-grid">
         {uploadedFiles.map((file, idx) => (
           <div className="preview-card" key={idx}>
-            <img src={file.url} alt={file.original_name} />
+            <img src={file.preview_url || resolveApiUrl(file.url)} alt={file.original_name} />
             <div className="preview-card-info">
               <div className="preview-card-name">{file.original_name}</div>
               <div className="preview-card-meta">

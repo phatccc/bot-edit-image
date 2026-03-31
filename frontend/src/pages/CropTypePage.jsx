@@ -13,6 +13,7 @@ import {
   loadSavedGrid,
   saveGrid,
 } from '../constants/cropPresets';
+import { resolveApiUrl } from '../api';
 
 const CROP_OPTIONS = [
   {
@@ -140,7 +141,7 @@ export default function CropTypePage({
 
   const hasSavedGrid = Boolean(loadSavedGrid(cropType, outfitPreset, weaponPreset, helmetPreset));
 
-  const sampleImageStr = `http://localhost:8000/uploads/${uploadedFiles[0].filename}`;
+  const sampleImageStr = uploadedFiles[0].preview_url || resolveApiUrl(uploadedFiles[0].url);
 
   return (
     <div>
