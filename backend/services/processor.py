@@ -109,6 +109,14 @@ def process_image(filepath: str, template_name: str = "default",
         item_results = save_item_outputs(filepath, inventory_items, suffix="weapon", detected_level=detected_level)
         if item_results:
             return item_results
+            
+    if crop_type == "character":
+        # For character crop, we just want the character crop itself
+        character_crop = crops.get("character")
+        if character_crop is not None:
+            item_results = save_item_outputs(filepath, [character_crop], suffix="character")
+            if item_results:
+                return item_results
     
     # Keep inventory colors identical to the original screenshot.
     if "character" in crops and crop_type not in {"outfit", "helmet", "weapon"}:

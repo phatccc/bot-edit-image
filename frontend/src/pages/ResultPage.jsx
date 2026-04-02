@@ -47,18 +47,19 @@ async function renderWeaponPreview(imageUrl, level, pkMode) {
   // Slightly reduced multiplier from 0.52 to 0.48
   const fontSize = Math.max(20, Math.round(canvas.height * 0.48));
 
-  // Minimal margins to push text flush against the corners
-  const marginX = Math.max(2, Math.round(canvas.width * 0.005));
-  const bottomBaselineY = canvas.height - Math.max(2, Math.round(canvas.height * 0.005));
+  // Removed margins completely to move labels perfectly flush with the card edges
+  const marginXLeft = 0;
+  const marginXRight = 0;
+  const bottomBaselineY = canvas.height;
 
   const levelText = trimmedLevel ? `LV${trimmedLevel}` : '';
   const rightText = pkMode === 'fullpk' ? 'FULL PK' : pkMode === 'pk' ? 'PK' : '';
 
   if (levelText) {
-    drawLabelText(ctx, levelText, marginX, bottomBaselineY, { fontSize, align: 'left' });
+    drawLabelText(ctx, levelText, marginXLeft, bottomBaselineY, { fontSize, align: 'left' });
   }
   if (rightText) {
-    drawLabelText(ctx, rightText, canvas.width - marginX, bottomBaselineY, { fontSize, align: 'right' });
+    drawLabelText(ctx, rightText, canvas.width - marginXRight, bottomBaselineY, { fontSize, align: 'right' });
   }
 
   return canvas.toDataURL('image/png');
@@ -900,7 +901,7 @@ export default function ResultPage({ outputs, cropType = 'outfit' }) {
 
       let mergedBlob = null;
       if (isWeaponMode) {
-        mergedBlob = await mergeImagesInColumnsClient(blobs, 10);
+        mergedBlob = await mergeImagesInColumnsClient(blobs, 12);
       } else {
         mergedBlob = await mergeImagesInColumnsClient(blobs, 3);
       }

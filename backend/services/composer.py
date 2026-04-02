@@ -11,9 +11,9 @@ def cv2_to_pil(cv_img: np.ndarray) -> Image.Image:
     return Image.fromarray(rgb)
 
 
-def pil_to_cv2(pil_img: Image.Image) -> np.ndarray:
+def pil_to_cv2(image: Image.Image) -> np.ndarray:
     """Convert PIL RGB Image to OpenCV BGR."""
-    return cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+    return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
 
 def create_gradient_background(width: int, height: int,
@@ -254,16 +254,13 @@ def compose_showcase(crops: Dict[str, Any], template: dict,
             item_pil = cv2_to_pil(item_cv)
             item_pil = enhance_display_image(item_pil, crop_type)
             if crop_type == "weapon":
-                contained = ImageOps.contain(
+                # Use fit instead of contain to ensure the weapon fills the card without padding
+                item_pil = ImageOps.fit(
                     item_pil,
                     (inv_config["item_width"], inv_config["item_height"]),
                     method=Image.Resampling.LANCZOS,
+                    centering=(0.5, 0.5)
                 )
-                framed = Image.new("RGB", (inv_config["item_width"], inv_config["item_height"]), (18, 18, 28))
-                paste_x = (inv_config["item_width"] - contained.width) // 2
-                paste_y = (inv_config["item_height"] - contained.height) // 2
-                framed.paste(contained, (paste_x, paste_y))
-                item_pil = framed
             else:
                 item_pil = ImageOps.fit(
                     item_pil,

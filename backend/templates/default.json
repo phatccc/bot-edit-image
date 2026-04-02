@@ -4,8 +4,16 @@
   "output_height": 1600,
   "background": {
     "type": "gradient",
-    "color_start": [15, 15, 25],
-    "color_end": [30, 20, 50]
+    "color_start": [
+      15,
+      15,
+      25
+    ],
+    "color_end": [
+      30,
+      20,
+      50
+    ]
   },
   "input_normalization": {
     "outfit_preset_regions": {
@@ -159,6 +167,17 @@
         "rows": 4,
         "padding_ratio": 0.01
       }
+    },
+    "character_screen": {
+      "description": "Cắt nhân vật (Ảnh 2 mẫu)",
+      "regions": {
+        "character": {
+          "x_ratio": 0.31,
+          "y_ratio": 0.14,
+          "w_ratio": 0.32,
+          "h_ratio": 0.69
+        }
+      }
     }
   },
   "poster_layout": {
@@ -173,7 +192,11 @@
       "right_padding": 20,
       "bottom_padding": 20,
       "border_radius": 0,
-      "border_color": [255, 165, 0],
+      "border_color": [
+        255,
+        165,
+        0
+      ],
       "border_width": 0
     },
     "weapon_character": {
@@ -184,7 +207,11 @@
       "right_padding": 20,
       "bottom_padding": 20,
       "border_radius": 0,
-      "border_color": [0, 214, 143],
+      "border_color": [
+        0,
+        214,
+        143
+      ],
       "border_width": 0
     },
     "inventory_items": {
@@ -196,7 +223,11 @@
       "rows": 5,
       "gap": 10,
       "border_radius": 0,
-      "border_color": [255, 140, 0],
+      "border_color": [
+        255,
+        140,
+        0
+      ],
       "border_width": 0
     },
     "weapon_items": {
@@ -210,7 +241,11 @@
       "right_padding": 20,
       "bottom_padding": 20,
       "border_radius": 0,
-      "border_color": [0, 214, 143],
+      "border_color": [
+        0,
+        214,
+        143
+      ],
       "border_width": 0
     },
     "title": {
@@ -218,14 +253,22 @@
       "x": 30,
       "y": 35,
       "font_size": 36,
-      "color": [255, 165, 0]
+      "color": [
+        255,
+        165,
+        0
+      ]
     },
     "subtitle": {
       "text": "",
       "x": 20,
       "y": 1140,
       "font_size": 22,
-      "color": [200, 200, 200]
+      "color": [
+        200,
+        200,
+        200
+      ]
     },
     "stats_bar": {
       "x": 20,
@@ -239,7 +282,12 @@
       "text": "",
       "y_offset": 50,
       "font_size": 16,
-      "color": [120, 120, 120, 180]
+      "color": [
+        120,
+        120,
+        120,
+        180
+      ]
     }
   }
 }

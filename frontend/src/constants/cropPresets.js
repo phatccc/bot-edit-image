@@ -30,7 +30,7 @@ export const WEAPON_GRID_PRESETS = [
     title: 'Súng kho',
     subtitle: 'Ngoại trang',
     description: 'Preset cho màn hình kho súng / ngoại trang như ảnh mẫu mới.',
-    grid: { x_ratio: 0.628, y_ratio: 0.192, w_ratio: 0.215, h_ratio: 0.137 },
+    grid: { x_ratio: 0.632, y_ratio: 0.202, w_ratio: 0.208, h_ratio: 0.118 },
   },
 ];
 

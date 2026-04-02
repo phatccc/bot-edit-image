@@ -40,6 +40,14 @@ const CROP_OPTIONS = [
     badge: 'Helmet',
     color: '#52c41a',
   },
+  {
+    id: 'character',
+    icon: '👤',
+    title: 'Cắt nhân vật',
+    description: 'Cắt nhân vật (ảnh 2 mẫu) — phù hợp để lấy ảnh nhân vật đứng giữa màn hình.',
+    badge: 'Character',
+    color: '#1890ff',
+  },
 ];
 
 export default function CropTypePage({
@@ -70,7 +78,9 @@ export default function CropTypePage({
         ? weaponPresetId
         : typeId === 'helmet'
           ? helmetPresetId
-          : DEFAULT_OUTFIT_PRESET_ID;
+          : typeId === 'character'
+            ? 'character_default'
+            : DEFAULT_OUTFIT_PRESET_ID;
   const resolveInitialGrid = (
     typeId = cropType,
     outfitPresetId = outfitPreset,

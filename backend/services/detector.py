@@ -342,14 +342,14 @@ def build_weapon_result(
 
     if use_sample_box:
         selected_box = find_selected_weapon_box(image, boxes) if boxes else source_box
-        preview = crop_to_box_union(image, [selected_box], margin=6) if selected_box else crop_box(image, source_box, margin=4)
+        preview = crop_to_box_union(image, [selected_box], margin=0) if selected_box else crop_box(image, source_box, margin=0)
         items = [crop_weapon_slot(image, selected_box)] if selected_box else [crop_weapon_slot(image, source_box)]
         selected_index = find_best_matching_box_index(source_box, boxes)
     else:
         local_boxes = boxes
         if local_boxes:
             selected_box = find_selected_weapon_box(panel, local_boxes)
-            preview = crop_to_box_union(panel, [selected_box], margin=6) if selected_box else crop_to_box_union(panel, local_boxes, margin=6)
+            preview = crop_to_box_union(panel, [selected_box], margin=0) if selected_box else crop_to_box_union(panel, local_boxes, margin=0)
             items = [crop_weapon_slot(panel, selected_box)] if selected_box else [crop_weapon_slot(panel, box) for box in local_boxes]
         else:
             preview = panel
@@ -692,9 +692,9 @@ def draw_level_on_card(image: np.ndarray, level: int) -> np.ndarray:
     
     (text_w, text_h), baseline = cv2.getTextSize(text, font_face, font_scale, thickness)
     
-    # Position at bottom-left corner - reduced padding for "sát gốc"
-    pad_x = max(2, int(w * 0.01))
-    pad_y = max(2, int(h * 0.012))
+    # Zero margins for perfectly flush labels as requested
+    pad_x = 0
+    pad_y = 0
     
     text_x = pad_x
     text_y = h - pad_y
@@ -756,9 +756,10 @@ def crop_weapon_slot(
 ) -> np.ndarray:
     """Crop tighter inside a weapon slot to remove UI borders and excess padding."""
     x, y, bw, bh = box
-    inset_x = max(4, int(bw * 0.018))
-    inset_top = max(4, int(bh * 0.032))
-    inset_bottom = max(5, int(bh * 0.045))
+    # Refined based on feedback: 15% horizontal (best balance) and "top/bottom lấy full"
+    inset_x = max(16, int(bw * 0.150))
+    inset_top = max(4, int(bh * 0.025))
+    inset_bottom = max(5, int(bh * 0.035))
 
     inner_box = (
         x + inset_x,
