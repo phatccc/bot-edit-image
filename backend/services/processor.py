@@ -9,8 +9,10 @@ from .detector import (
     load_template,
     enhance_crop,
     normalize_image_for_crop_type,
+    draw_level_on_card,
 )
 from .composer import compose_showcase
+from .weapon_level import detect_weapon_level
 
 
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "outputs")
@@ -21,6 +23,7 @@ def save_item_outputs(
     filepath: str,
     items: List[cv2.typing.MatLike],
     suffix: str,
+    detected_level: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Save each detected inventory item as its own standalone output image."""
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -37,20 +40,23 @@ def save_item_outputs(
         cv2.imwrite(output_path, item)
 
         height, width = item.shape[:2]
-        results.append({
+        result = {
             "filename": output_name,
             "source_name": f"{source_name} • item {idx:02d}",
             "width": width,
             "height": height,
             "path": output_path,
-        })
+        }
+        if detected_level is not None:
+            result["detected_level"] = str(detected_level)
+        results.append(result)
 
     return results
 
 
 def process_image(filepath: str, template_name: str = "default",
                   crop_type: str = "outfit", outfit_preset: Optional[str] = None,
-                  custom_grid: Any = None) -> dict:
+                  custom_grid: Any = None, detect_level: bool = False) -> dict:
     """
     Full processing pipeline for a single PUBG Mobile screenshot.
     
@@ -97,7 +103,10 @@ def process_image(filepath: str, template_name: str = "default",
     inventory_items = detection_result.get("inventory_items", [])
 
     if crop_type == "weapon":
-        item_results = save_item_outputs(filepath, inventory_items, suffix="weapon")
+        detected_level = None
+        if detect_level and inventory_items:
+            detected_level = detect_weapon_level(filepath)
+        item_results = save_item_outputs(filepath, inventory_items, suffix="weapon", detected_level=detected_level)
         if item_results:
             return item_results
     
@@ -105,8 +114,12 @@ def process_image(filepath: str, template_name: str = "default",
     if "character" in crops and crop_type not in {"outfit", "helmet", "weapon"}:
         crops["character"] = enhance_crop(crops["character"])
     
-    # Compose poster
-    poster = compose_showcase(crops, template, inventory_items, crop_type=crop_type)
+    if crop_type in {"outfit", "helmet"} and inventory_items:
+        from .composer import compose_inventory_tight_grid
+        poster = compose_inventory_tight_grid(inventory_items, cols=3)
+    else:
+        # Compose poster
+        poster = compose_showcase(crops, template, inventory_items, crop_type=crop_type)
     
     # Save output
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -126,28 +139,36 @@ def process_image(filepath: str, template_name: str = "default",
 
 def process_multiple(filenames: list, template_name: str = "default",
                      crop_type: str = "outfit", outfit_preset: Optional[str] = None,
-                     custom_grid: Any = None) -> list:
-    """Process multiple images and return list of output info."""
-    results = []
-    for filename in filenames:
+                     custom_grid: Any = None, detect_level: bool = False) -> list:
+    """Process multiple images in parallel and return list of output info."""
+    from concurrent.futures import ThreadPoolExecutor
+    
+    def process_single(filename):
         filepath = os.path.join(UPLOAD_DIR, filename)
-        if os.path.exists(filepath):
-            try:
-                result = process_image(
-                    filepath,
-                    template_name,
-                    crop_type=crop_type,
-                    outfit_preset=outfit_preset,
-                    custom_grid=custom_grid,
-                )
-                if isinstance(result, list):
-                    results.extend(result)
-                else:
-                    results.append(result)
-            except Exception as e:
-                results.append({
-                    "filename": None,
-                    "source_name": filename,
-                    "error": str(e)
-                })
+        if not os.path.exists(filepath):
+            return {"filename": None, "source_name": filename, "error": "File not found"}
+            
+        try:
+            return process_image(
+                filepath,
+                template_name,
+                crop_type=crop_type,
+                outfit_preset=outfit_preset,
+                custom_grid=custom_grid,
+                detect_level=detect_level,
+            )
+        except Exception as e:
+            return {"filename": None, "source_name": filename, "error": str(e)}
+
+    results = []
+    # Use max 4 workers to avoid overwhelming CPU/Memory (EasyOCR uses some RAM)
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        batch_results = list(executor.map(process_single, filenames))
+        
+    for res in batch_results:
+        if isinstance(res, list):
+            results.extend(res)
+        else:
+            results.append(res)
+            
     return results

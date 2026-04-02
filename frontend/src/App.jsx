@@ -74,6 +74,7 @@ export default function App() {
   const [weaponPreset, setWeaponPreset] = useState(DEFAULT_WEAPON_PRESET_ID);
   const [helmetPreset, setHelmetPreset] = useState(DEFAULT_HELMET_PRESET_ID);
   const [customGrid, setCustomGrid] = useState(null);
+  const [detectLevel, setDetectLevel] = useState(false);
 
   return (
     <BrowserRouter>
@@ -100,6 +101,8 @@ export default function App() {
                   setHelmetPreset={setHelmetPreset}
                   customGrid={customGrid}
                   setCustomGrid={setCustomGrid}
+                  detectLevel={detectLevel}
+                  setDetectLevel={setDetectLevel}
                 />
               }
             />
@@ -114,6 +117,7 @@ export default function App() {
                   weaponPreset={weaponPreset}
                   helmetPreset={helmetPreset}
                   customGrid={customGrid}
+                  detectLevel={detectLevel}
                 />
               }
             />

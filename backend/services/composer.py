@@ -339,3 +339,86 @@ def compose_showcase(crops: Dict[str, Any], template: dict,
         )
     
     return poster.convert("RGB")
+
+
+def merge_images_vertically(filenames: List[str], output_dir: str) -> str:
+    """
+    Merge multiple images vertically into a single image.
+    All images are resized to the same width (width of the first image).
+    """
+    import uuid
+    from PIL import Image
+
+    if not filenames:
+        return ""
+    
+    valid_images = []
+    max_width = 0
+    total_height = 0
+    
+    for fname in filenames:
+        path = os.path.join(output_dir, fname)
+        if os.path.exists(path):
+            try:
+                img = Image.open(path)
+                valid_images.append(img)
+                if max_width == 0:
+                    max_width = img.size[0]
+            except Exception:
+                continue
+            
+    if not valid_images:
+        return ""
+        
+    # Calculate total height after resizing
+    resized_images = []
+    for img in valid_images:
+        if img.size[0] != max_width:
+            w_percent = (max_width / float(img.size[0]))
+            h_size = int((float(img.size[1]) * float(w_percent)))
+            img = img.resize((max_width, h_size), Image.Resampling.LANCZOS)
+        resized_images.append(img)
+        total_height += img.size[1]
+        
+    merged_img = Image.new("RGB", (max_width, total_height), (18, 18, 28))
+    current_y = 0
+    
+    for img in resized_images:
+        merged_img.paste(img, (0, current_y))
+        current_y += img.size[1]
+        
+    out_filename = f"merged_{uuid.uuid4().hex[:8]}.jpg"
+    merged_img.save(os.path.join(output_dir, out_filename), "JPEG", quality=90)
+    return out_filename
+
+
+def compose_inventory_tight_grid(items: List[np.ndarray], cols: int = 3) -> Image.Image:
+    """
+    Compose a tight grid (collage) of the inventory items without gaps.
+    """
+    if not items:
+        return Image.new("RGB", (100, 100), (0, 0, 0))
+        
+    pil_items = [cv2_to_pil(item) for item in items]
+    
+    max_w = max(item.width for item in pil_items)
+    max_h = max(item.height for item in pil_items)
+    
+    # Resize items uniformly
+    resized = []
+    for item in pil_items:
+        resized.append(ImageOps.fit(item, (max_w, max_h), method=Image.Resampling.LANCZOS, centering=(0.5, 0.5)))
+        
+    rows = (len(resized) + cols - 1) // cols
+    
+    grid_w = max_w * cols
+    grid_h = max_h * rows
+    
+    grid_img = Image.new("RGB", (grid_w, grid_h), (0, 0, 0))
+    
+    for idx, item in enumerate(resized):
+        row = idx // cols
+        col = idx % cols
+        grid_img.paste(item, (col * max_w, row * max_h))
+        
+    return grid_img

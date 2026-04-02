@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { uploadImages } from '../api';
 
@@ -37,6 +37,28 @@ export default function UploadPage({ uploadedFiles, setUploadedFiles }) {
   const handleDragLeave = useCallback(() => {
     setDragOver(false);
   }, []);
+
+  const handlePaste = useCallback((e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    
+    const files = [];
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image/') !== -1) {
+        files.push(items[i].getAsFile());
+      }
+    }
+    if (files.length > 0) {
+      handleFiles(files);
+    }
+  }, [handleFiles]);
+
+  useEffect(() => {
+    window.addEventListener('paste', handlePaste);
+    return () => {
+      window.removeEventListener('paste', handlePaste);
+    };
+  }, [handlePaste]);
 
   const handleRemoveLocal = (idx) => {
     setLocalFiles((prev) => prev.filter((_, i) => i !== idx));
@@ -91,7 +113,7 @@ export default function UploadPage({ uploadedFiles, setUploadedFiles }) {
         onClick={() => fileInputRef.current?.click()}
       >
         <span className="upload-icon">📸</span>
-        <div className="upload-text">Kéo thả ảnh vào đây</div>
+        <div className="upload-text">Kéo thả hoặc nhấn Ctrl+V để dán ảnh</div>
         <div className="upload-subtext">
           hoặc <span>click để chọn file</span> • PNG, JPEG, WebP
         </div>

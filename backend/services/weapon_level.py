@@ -48,7 +48,8 @@ class WeaponLevelDetector:
             return None
 
         height, width = img.shape[:2]
-        crop_height = int(height * 0.15)
+        # Increased crop height from 0.15 to 0.25 to catch levels lower down
+        crop_height = int(height * 0.25)
         return img[0:crop_height, 0:width]
 
     def _preprocess_title_region(self, cropped_img):
@@ -58,8 +59,14 @@ class WeaponLevelDetector:
         gray = cv2.cvtColor(cropped_img, cv2.COLOR_BGR2GRAY)
         gray = cv2.GaussianBlur(gray, (3, 3), 0)
         gray = cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX)
-        _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        return cv2.cvtColor(thresh, cv2.COLOR_GRAY2BGR)
+        
+        # Method 1: Standard OTSU
+        _, thresh1 = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        
+        # Method 2: Inverted OTSU (often helps with white text on dark backgrounds)
+        _, thresh2 = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        
+        return [cv2.cvtColor(thresh1, cv2.COLOR_GRAY2BGR), cv2.cvtColor(thresh2, cv2.COLOR_GRAY2BGR)]
 
     def extract_cap_x_with_ocr_results(self, image: Any) -> Tuple[List[Any], Optional[int]]:
         reader = get_ocr_reader()
@@ -70,40 +77,52 @@ class WeaponLevelDetector:
         if cropped is None:
             return [], None
 
-        processed = self._preprocess_title_region(cropped)
+        # Optimization: Limit resolution for OCR to speed up processing
+        h, w = cropped.shape[:2]
+        if w > 1000:
+            scale = 1000.0 / w
+            cropped = cv2.resize(cropped, (1000, int(h * scale)), interpolation=cv2.INTER_AREA)
+
+        preprocessed_variants = self._preprocess_title_region(cropped)
         variants = [cropped]
-        if processed is not None:
-            variants.append(processed)
-
-        combined_results: List[Any] = []
-        full_text_parts = []
-        for variant in variants:
-            results = reader.readtext(variant)
-            combined_results.extend(results)
-            full_text_parts.extend(result[1] for result in results)
-
-        full_text = " ".join(full_text_parts)
+        if isinstance(preprocessed_variants, list):
+            variants.extend(preprocessed_variants)
+        elif preprocessed_variants is not None:
+            variants.append(preprocessed_variants)
 
         patterns = [
             r"[\(\s]C[aăâấầẩẫậắằẳẵặ]p\s*(\d+)",
             r"[\(\s]Cap\s*(\d+)",
         ]
-        for pattern in patterns:
-            match = re.search(pattern, full_text, re.IGNORECASE)
-            if match:
-                return combined_results, int(match.group(1))
 
-        pipe_pattern = r"\|/(\d+)"
-        if re.search(pipe_pattern, full_text):
-            return combined_results, 1
+        def find_level(text: str) -> Optional[int]:
+            for pattern in patterns:
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    return int(match.group(1))
+            
+            if re.search(r"\|/(\d+)", text):
+                return 1
+            
+            fraction_match = re.search(r"(\d+)\s*/\s*(\d+)", text)
+            if fraction_match:
+                x_val, y_val = int(fraction_match.group(1)), int(fraction_match.group(2))
+                return x_val + 1 if x_val == 3 and y_val == 3 else x_val
+            return None
 
-        fraction_match = re.search(r"(\d+)\s*/\s*(\d+)", full_text)
-        if fraction_match:
-            x_value = int(fraction_match.group(1))
-            y_value = int(fraction_match.group(2))
-            if x_value == 3 and y_value == 3:
-                return combined_results, x_value + 1
-            return combined_results, x_value
+        combined_results = []
+        for variant in variants:
+            # detail=0 returns just strings (much faster)
+            results = reader.readtext(variant, detail=0)
+            if not results:
+                continue
+                
+            combined_results.extend(results)
+            full_text = " ".join(results)
+            
+            level = find_level(full_text)
+            if level is not None:
+                return combined_results, level
 
         return combined_results, None
 

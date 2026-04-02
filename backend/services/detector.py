@@ -242,6 +242,66 @@ def build_inventory_result(
     }
 
 
+def find_selected_weapon_box(image: np.ndarray, boxes: List[Tuple[int, int, int, int]]) -> Tuple[int, int, int, int]:
+    """
+    Find the single weapon box that is currently selected (highlighted with a golden/orange border).
+    Uses HSV color filtering on the outer edges of each box.
+    Returns the selected box, or the first box if none stands out.
+    """
+    if not boxes:
+        return None
+    if len(boxes) == 1:
+        return boxes[0]
+
+    best_box = boxes[0]
+    max_golden_pixels = -1
+
+    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    
+    # PUBG Mobile golden/orange selection border color range
+    lower_gold = np.array([5, 120, 120], dtype=np.uint8)
+    upper_gold = np.array([30, 255, 255], dtype=np.uint8)
+
+    h, w = image.shape[:2]
+
+    for box in boxes:
+        x, y, bw, bh = box
+        
+        # Ensure box is within image bounds
+        x1 = max(0, x)
+        y1 = max(0, y)
+        x2 = min(w, x + bw)
+        y2 = min(h, y + bh)
+        
+        if x2 <= x1 or y2 <= y1:
+            continue
+
+        box_hsv = hsv_image[y1:y2, x1:x2]
+        
+        # We only care about the border, so we mask out the inner 80% to avoid matching skin colors
+        mask = cv2.inRange(box_hsv, lower_gold, upper_gold)
+        
+        inner_x1 = int(bw * 0.1)
+        inner_y1 = int(bh * 0.1)
+        inner_x2 = int(bw * 0.9)
+        inner_y2 = int(bh * 0.9)
+        
+        if inner_x2 > inner_x1 and inner_y2 > inner_y1:
+            mask[inner_y1:inner_y2, inner_x1:inner_x2] = 0
+
+        golden_pixels = cv2.countNonZero(mask)
+
+        if golden_pixels > max_golden_pixels:
+            max_golden_pixels = golden_pixels
+            best_box = box
+
+    # If no box has a significant golden border, fallback to the first one
+    if max_golden_pixels < 20:
+        return boxes[0]
+
+    return best_box
+
+
 def build_weapon_result(
     image: np.ndarray,
     template: dict,
@@ -281,14 +341,16 @@ def build_weapon_result(
         boxes = detect_vertical_card_boxes(panel.copy())
 
     if use_sample_box:
-        preview = crop_to_box_union(image, boxes, margin=6) if boxes else crop_box(image, source_box, margin=4)
-        items = [crop_weapon_slot(image, box) for box in boxes] if boxes else [crop_weapon_slot(image, source_box)]
+        selected_box = find_selected_weapon_box(image, boxes) if boxes else source_box
+        preview = crop_to_box_union(image, [selected_box], margin=6) if selected_box else crop_box(image, source_box, margin=4)
+        items = [crop_weapon_slot(image, selected_box)] if selected_box else [crop_weapon_slot(image, source_box)]
         selected_index = find_best_matching_box_index(source_box, boxes)
     else:
         local_boxes = boxes
         if local_boxes:
-            preview = crop_to_box_union(panel, local_boxes, margin=6)
-            items = [crop_weapon_slot(panel, box) for box in local_boxes]
+            selected_box = find_selected_weapon_box(panel, local_boxes)
+            preview = crop_to_box_union(panel, [selected_box], margin=6) if selected_box else crop_to_box_union(panel, local_boxes, margin=6)
+            items = [crop_weapon_slot(panel, selected_box)] if selected_box else [crop_weapon_slot(panel, box) for box in local_boxes]
         else:
             preview = panel
             items = crop_grid_items(
@@ -396,8 +458,14 @@ def detect_inventory_cell_boxes(
     if len(col_groups) < cols or len(row_groups) < min(rows, 3):
         return []
 
-    col_centers = [group["center"] for group in col_groups[:cols]]
-    row_centers = [group["center"] for group in row_groups[:rows]]
+    col_centers = sorted([group["center"] for group in col_groups[:cols]])
+    
+    # Extract all rows that have enough items
+    valid_row_groups = [g for g in row_groups if g["count"] >= max(2, cols - 1)]
+    if len(valid_row_groups) < min(rows, 3):
+        valid_row_groups = row_groups[:max(rows, len(valid_row_groups))]
+        
+    row_centers = sorted([group["center"] for group in valid_row_groups])
 
     slots: Dict[Tuple[int, int], Dict[str, Any]] = {}
     for candidate in candidates:
@@ -611,30 +679,32 @@ def find_best_matching_box_index(
 
 
 def draw_level_on_card(image: np.ndarray, level: int) -> np.ndarray:
-    """Draw a visible level badge on a weapon card using OpenCV."""
+    """Draw a visible level badge on a weapon card using OpenCV matching the UI reference."""
     output = image.copy()
     h, w = output.shape[:2]
     if h == 0 or w == 0:
         return output
 
-    badge_w = max(int(w * 0.18), 72)
-    badge_h = max(int(h * 0.18), 34)
-    x1, y1 = 12, 12
-    x2, y2 = min(w - 12, x1 + badge_w), min(h - 12, y1 + badge_h)
-
-    overlay = output.copy()
-    cv2.rectangle(overlay, (x1, y1), (x2, y2), (20, 20, 20), -1)
-    cv2.addWeighted(overlay, 0.72, output, 0.28, 0, output)
-    cv2.rectangle(output, (x1, y1), (x2, y2), (0, 165, 255), 2)
-
-    text = f"Lv {level}"
-    font_scale = max(w / 420.0, 0.65)
-    thickness = 2
-    (text_w, text_h), baseline = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
-    text_x = x1 + max(8, (badge_w - text_w) // 2)
-    text_y = y1 + max(text_h + 4, (badge_h + text_h) // 2)
-    cv2.putText(output, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness + 2, cv2.LINE_AA)
-    cv2.putText(output, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 230, 120), thickness, cv2.LINE_AA)
+    text = f"LV{level}"
+    font_face = cv2.FONT_HERSHEY_DUPLEX | cv2.FONT_ITALIC
+    font_scale = max(w / 210.0, 0.95)
+    thickness = max(3, int(font_scale * 2.2))
+    
+    (text_w, text_h), baseline = cv2.getTextSize(text, font_face, font_scale, thickness)
+    
+    # Position at bottom-left corner - reduced padding for "sát gốc"
+    pad_x = max(2, int(w * 0.01))
+    pad_y = max(2, int(h * 0.012))
+    
+    text_x = pad_x
+    text_y = h - pad_y
+    
+    # Draw dark shadow/stroke for readability - make it even bolder
+    cv2.putText(output, text, (text_x, text_y), font_face, font_scale, (0, 0, 0), thickness + 5, cv2.LINE_AA)
+    cv2.putText(output, text, (text_x, text_y), font_face, font_scale, (0, 0, 0), thickness + 3, cv2.LINE_AA)
+    
+    # Draw pure white text
+    cv2.putText(output, text, (text_x, text_y), font_face, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
 
     return output
 

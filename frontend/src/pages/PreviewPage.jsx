@@ -17,7 +17,8 @@ export default function PreviewPage({
   outfitPreset = DEFAULT_OUTFIT_PRESET_ID,
   weaponPreset = DEFAULT_WEAPON_PRESET_ID,
   helmetPreset = DEFAULT_HELMET_PRESET_ID,
-  customGrid = null
+  customGrid = null,
+  detectLevel = false,
 }) {
   const [processing, setProcessing] = useState(false);
   const [templates, setTemplates] = useState([]);
@@ -51,10 +52,11 @@ export default function PreviewPage({
         selectedTemplate,
         cropType,
         customGrid,
-        cropType === 'outfit' ? outfitPreset : null
+        cropType === 'outfit' ? outfitPreset : null,
+        detectLevel
       );
       setOutputs(result.outputs);
-      
+
       setTimeout(() => {
         navigate('/result');
       }, 500);

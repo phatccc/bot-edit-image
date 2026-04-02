@@ -8,18 +8,21 @@ function drawLabelText(ctx, text, x, y, options = {}) {
     fontSize = 38,
   } = options;
   ctx.save();
-  ctx.font = `italic 900 ${fontSize}px Impact, Haettenschweiler, "Arial Black", "Helvetica Neue", sans-serif`;
+  ctx.font = `900 ${fontSize}px "Burbank Big Condensed Black", Impact, sans-serif`;
   ctx.textAlign = align;
   ctx.textBaseline = 'alphabetic';
   ctx.lineJoin = 'round';
-  ctx.lineWidth = Math.max(5, Math.round(fontSize * 0.18));
-  ctx.strokeStyle = '#111';
+
+  // Base setup (Removed stroke/border as requested by user)
   ctx.fillStyle = '#fff';
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.28)';
-  ctx.shadowBlur = 0;
+
+  // Outer shadow for depth and readability (instead of a thick crude border)
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+  ctx.shadowBlur = 4;
   ctx.shadowOffsetX = 2;
   ctx.shadowOffsetY = 2;
-  ctx.strokeText(text, x, y);
+
+  // Only fill the text, NO stroke
   ctx.fillText(text, x, y);
   ctx.restore();
 }
@@ -40,20 +43,124 @@ async function renderWeaponPreview(imageUrl, level, pkMode) {
   const ctx = canvas.getContext('2d');
   ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-  const fontSize = Math.max(80, Math.round(canvas.height * 0.38));
-  const marginX = Math.max(14, Math.round(canvas.width * 0.03));
-  const baselineY = canvas.height - Math.max(10, Math.round(canvas.height * 0.02));
-  const levelText = trimmedLevel ? `Lv${trimmedLevel}` : '';
-  const rightText = pkMode === 'fullpk' ? 'FullPk' : pkMode === 'pk' ? 'Pk' : '';
+  // Dynamic font size that scales with image height, avoiding the massive minimum
+  // Slightly reduced multiplier from 0.52 to 0.48
+  const fontSize = Math.max(20, Math.round(canvas.height * 0.48));
+
+  // Minimal margins to push text flush against the corners
+  const marginX = Math.max(2, Math.round(canvas.width * 0.005));
+  const bottomBaselineY = canvas.height - Math.max(2, Math.round(canvas.height * 0.005));
+
+  const levelText = trimmedLevel ? `LV${trimmedLevel}` : '';
+  const rightText = pkMode === 'fullpk' ? 'FULL PK' : pkMode === 'pk' ? 'PK' : '';
 
   if (levelText) {
-    drawLabelText(ctx, levelText, marginX, baselineY, { fontSize, align: 'left' });
+    drawLabelText(ctx, levelText, marginX, bottomBaselineY, { fontSize, align: 'left' });
   }
   if (rightText) {
-    drawLabelText(ctx, rightText, canvas.width - marginX, baselineY, { fontSize, align: 'right' });
+    drawLabelText(ctx, rightText, canvas.width - marginX, bottomBaselineY, { fontSize, align: 'right' });
   }
 
   return canvas.toDataURL('image/png');
+}
+
+async function mergeImagesInColumnsClient(blobs, maxPerColumn = 3) {
+  const images = await Promise.all(
+    blobs.map(async (blob) => {
+      const img = new Image();
+      const url = URL.createObjectURL(blob);
+      return new Promise((resolve, reject) => {
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          resolve(img);
+        };
+        img.onerror = reject;
+        img.src = url;
+      });
+    })
+  );
+
+  if (images.length === 0) return null;
+
+  const cellWidth = images[0].width;
+
+  const layout = images.map((img) => ({
+    img,
+    w: cellWidth,
+    h: Math.round(img.height * (cellWidth / img.width))
+  }));
+
+  const cols = Math.ceil(layout.length / maxPerColumn);
+  const colHeights = Array(cols).fill(0);
+
+  for (let i = 0; i < layout.length; i++) {
+    const colIndex = Math.floor(i / maxPerColumn);
+    colHeights[colIndex] += layout[i].h;
+  }
+  const maxGridHeight = Math.max(...colHeights);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = cellWidth * cols;
+  canvas.height = maxGridHeight;
+  const ctx = canvas.getContext('2d');
+
+  let currentX = 0;
+  for (let c = 0; c < cols; c++) {
+    let currentY = 0;
+    const startIndex = c * maxPerColumn;
+    const endIndex = Math.min(startIndex + maxPerColumn, layout.length);
+    for (let i = startIndex; i < endIndex; i++) {
+      const item = layout[i];
+      ctx.drawImage(item.img, currentX, currentY, item.w, item.h);
+      currentY += item.h;
+    }
+    currentX += cellWidth;
+  }
+
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), 'image/png');
+  });
+}
+
+async function mergeImagesVerticallyClient(blobs) {
+  const images = await Promise.all(
+    blobs.map(async (blob) => {
+      const img = new Image();
+      const url = URL.createObjectURL(blob);
+      return new Promise((resolve, reject) => {
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          resolve(img);
+        };
+        img.onerror = reject;
+        img.src = url;
+      });
+    })
+  );
+
+  if (images.length === 0) return null;
+
+  const maxWidth = images[0].width;
+  let totalHeight = 0;
+  const layout = images.map((img) => {
+    const h = Math.round(img.height * (maxWidth / img.width));
+    const entry = { img, h, y: totalHeight };
+    totalHeight += h;
+    return entry;
+  });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = maxWidth;
+  canvas.height = totalHeight;
+  const ctx = canvas.getContext('2d');
+
+  layout.forEach((item) => {
+    ctx.drawImage(item.img, 0, item.y, canvas.width, item.h);
+  });
+
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), 'image/png');
+  });
 }
 
 function downloadImage(url, filename) {
@@ -443,17 +550,18 @@ function WeaponResultCard({
   imageUrl,
   editedImageUrl,
   selected,
+  level,
+  pkMode,
+  onLevelChange,
+  onPkModeChange,
   onEditedImageChange,
   onOpenLightbox,
   onToggleSelected,
   suppressLightboxRef,
 }) {
-  const [level, setLevel] = useState('');
-  const [pkMode, setPkMode] = useState('none');
-
   useEffect(() => {
     let active = true;
-    const trimmedLevel = level.trim();
+    const trimmedLevel = String(level || '').trim();
 
     if (!trimmedLevel && pkMode === 'none') {
       onEditedImageChange(output.filename, null);
@@ -497,27 +605,27 @@ function WeaponResultCard({
             max="99"
             placeholder="Nhập Lv"
             value={level}
-            onChange={(e) => setLevel(e.target.value.replace(/[^\d]/g, '').slice(0, 2))}
+            onChange={(e) => onLevelChange(output.filename, e.target.value.replace(/[^\d]/g, '').slice(0, 2))}
           />
           <div className="weapon-pk-group">
             <button
               type="button"
               className={`weapon-pk-button ${pkMode === 'none' ? 'active' : ''}`}
-              onClick={() => setPkMode('none')}
+              onClick={() => onPkModeChange(output.filename, 'none')}
             >
               Không
             </button>
             <button
               type="button"
               className={`weapon-pk-button ${pkMode === 'pk' ? 'active' : ''}`}
-              onClick={() => setPkMode('pk')}
+              onClick={() => onPkModeChange(output.filename, 'pk')}
             >
               PK
             </button>
             <button
               type="button"
               className={`weapon-pk-button ${pkMode === 'fullpk' ? 'active' : ''}`}
-              onClick={() => setPkMode('fullpk')}
+              onClick={() => onPkModeChange(output.filename, 'fullpk')}
             >
               Full PK
             </button>
@@ -556,14 +664,24 @@ export default function ResultPage({ outputs, cropType = 'outfit' }) {
   const [selectedMap, setSelectedMap] = useState({});
   const [dragFiles, setDragFiles] = useState([]);
   const [preparingDrag, setPreparingDrag] = useState(false);
+  const [merging, setMerging] = useState(false);
+  const [weaponMetadata, setWeaponMetadata] = useState({});
   const gridRef = useRef(null);
   const suppressLightboxRef = useRef(false);
 
-  const resolvedOutputs = useMemo(
-    () => outputs.map((output) => ({ ...output, resolvedUrl: resolveApiUrl(output.url) })),
-    [outputs]
-  );
   const isWeaponMode = cropType === 'weapon';
+
+  const resolvedOutputs = useMemo(() => {
+    const mapped = outputs.map((output) => ({ ...output, resolvedUrl: resolveApiUrl(output.url) }));
+    if (isWeaponMode) {
+      mapped.sort((a, b) => {
+        const lvA = parseInt(a.detected_level || '0', 10);
+        const lvB = parseInt(b.detected_level || '0', 10);
+        return lvB - lvA;
+      });
+    }
+    return mapped;
+  }, [outputs, isWeaponMode]);
 
   useEffect(() => {
     const validFilenames = new Set(resolvedOutputs.map((output) => output.filename));
@@ -577,6 +695,23 @@ export default function ResultPage({ outputs, cropType = 'outfit' }) {
       return next;
     });
   }, [resolvedOutputs]);
+
+  // Pre-populate weapon metadata from backend detected_level
+  useEffect(() => {
+    if (!isWeaponMode) return;
+    const initial = {};
+    resolvedOutputs.forEach((output) => {
+      if (output.detected_level) {
+        initial[output.filename] = {
+          level: String(output.detected_level),
+          pkMode: 'none',
+        };
+      }
+    });
+    if (Object.keys(initial).length > 0) {
+      setWeaponMetadata((prev) => ({ ...initial, ...prev }));
+    }
+  }, [resolvedOutputs, isWeaponMode]);
 
   const handleEditedImageChange = useCallback((filename, nextUrl) => {
     setEditedImageUrls((prev) => {
@@ -600,8 +735,30 @@ export default function ResultPage({ outputs, cropType = 'outfit' }) {
     });
   }, []);
 
+  const handleLevelChange = useCallback((filename, level) => {
+    setWeaponMetadata((prev) => ({
+      ...prev,
+      [filename]: { ...(prev[filename] || { pkMode: 'none' }), level },
+    }));
+  }, []);
+
+  const handlePkModeChange = useCallback((filename, pkMode) => {
+    setWeaponMetadata((prev) => ({
+      ...prev,
+      [filename]: { ...(prev[filename] || { level: '' }), pkMode },
+    }));
+  }, []);
+
   const toggleSelected = useCallback((filename) => {
-    setSelectedMap((prev) => (prev[filename] ? {} : { [filename]: true }));
+    setSelectedMap((prev) => {
+      const next = { ...prev };
+      if (next[filename]) {
+        delete next[filename];
+      } else {
+        next[filename] = true;
+      }
+      return next;
+    });
   }, []);
 
   const handleSelectAll = useCallback(() => {
@@ -610,10 +767,11 @@ export default function ResultPage({ outputs, cropType = 'outfit' }) {
     );
   }, [resolvedOutputs]);
 
-  const selectedOutputs = useMemo(
-    () => resolvedOutputs.filter((output) => selectedMap[output.filename]),
-    [resolvedOutputs, selectedMap]
-  );
+  const selectedOutputs = useMemo(() => {
+    return Object.keys(selectedMap)
+      .map((filename) => resolvedOutputs.find((output) => output.filename === filename))
+      .filter(Boolean);
+  }, [resolvedOutputs, selectedMap]);
   const selectedCount = selectedOutputs.length;
   const allSelected = resolvedOutputs.length > 0 && selectedCount === resolvedOutputs.length;
 
@@ -716,6 +874,52 @@ export default function ResultPage({ outputs, cropType = 'outfit' }) {
     setDownloading(false);
   };
 
+  const handleMergeVertical = async () => {
+    if (selectedCount === 0) {
+      alert('Hãy chọn ít nhất 1 ảnh để ghép.');
+      return;
+    }
+    setMerging(true);
+    setCopyMessage('');
+    try {
+      let sortedOutputs = [...selectedOutputs];
+      if (isWeaponMode) {
+        sortedOutputs.sort((a, b) => {
+          const lvA = parseInt((weaponMetadata[a.filename]?.level || '0'), 10);
+          const lvB = parseInt((weaponMetadata[b.filename]?.level || '0'), 10);
+          return lvB - lvA;
+        });
+      }
+
+      const blobs = await Promise.all(
+        sortedOutputs.map(async (output) => {
+          const url = getPreviewUrl(output);
+          return fetchPreparedImageBlob(url);
+        })
+      );
+
+      let mergedBlob = null;
+      if (isWeaponMode) {
+        mergedBlob = await mergeImagesInColumnsClient(blobs, 10);
+      } else {
+        mergedBlob = await mergeImagesInColumnsClient(blobs, 3);
+      }
+
+      if (mergedBlob) {
+        const url = URL.createObjectURL(mergedBlob);
+        setLightboxImage(url);
+        setCopyMessage(
+          isWeaponMode
+            ? 'Đã ghép xong ảnh dọc. Bạn có thể chuột phải lưu ảnh hoặc nhấn "Download tất cả" để lấy bản lưu tên khác.'
+            : 'Đã ghép xong ảnh ngàng (chia cột). Bạn có thể chuột phải lưu ảnh!'
+        );
+      }
+    } catch (err) {
+      alert('Ghép ảnh thất bại: ' + err.message);
+    }
+    setMerging(false);
+  };
+
   useEffect(() => {
     const handleKeyDown = (event) => {
       const isCopyShortcut = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c';
@@ -813,10 +1017,9 @@ export default function ResultPage({ outputs, cropType = 'outfit' }) {
           <button
             type="button"
             className="btn btn-secondary"
-            onClick={handleSelectAll}
-            disabled={allSelected}
+            onClick={allSelected ? () => setSelectedMap({}) : handleSelectAll}
           >
-            Chọn tất cả
+            {allSelected ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
           </button>
           <button
             type="button"
@@ -836,6 +1039,14 @@ export default function ResultPage({ outputs, cropType = 'outfit' }) {
           >
             {preparingDrag ? 'Đang chuẩn bị kéo...' : 'Kéo thả đã chọn'}
           </button>
+          <button
+            type="button"
+            className="btn btn-success"
+            onClick={handleMergeVertical}
+            disabled={merging || selectedCount === 0}
+          >
+            {merging ? 'Đang ghép...' : (isWeaponMode ? 'Ghép ảnh dọc' : 'Ghép ảnh ngang')}
+          </button>
         </div>
         <div className="result-selection-hint">
           {copyMessage || 'Bấm vào 1 thẻ để chọn đúng 1 ảnh rồi copy. Nếu muốn đưa hết ảnh sang Canva, hãy bấm "Chọn tất cả" rồi dùng "Kéo thả đã chọn".'}
@@ -847,29 +1058,33 @@ export default function ResultPage({ outputs, cropType = 'outfit' }) {
         ref={gridRef}
       >
         <div className="result-grid">
-        {resolvedOutputs.map((output, idx) => (
-          isWeaponMode ? (
-            <WeaponResultCard
-              key={idx}
-              output={output}
-              imageUrl={output.resolvedUrl}
-              editedImageUrl={editedImageUrls[output.filename]}
-              selected={Boolean(selectedMap[output.filename])}
-              onEditedImageChange={handleEditedImageChange}
-              onToggleSelected={() => toggleSelected(output.filename)}
-              suppressLightboxRef={suppressLightboxRef}
-            />
-          ) : (
-            <StandardResultCard
-              key={idx}
-              output={output}
-              imageUrl={output.resolvedUrl}
-              selected={Boolean(selectedMap[output.filename])}
-              onToggleSelected={() => toggleSelected(output.filename)}
-              suppressLightboxRef={suppressLightboxRef}
-            />
-          )
-        ))}
+          {resolvedOutputs.map((output, idx) => (
+            isWeaponMode ? (
+              <WeaponResultCard
+                key={idx}
+                output={output}
+                imageUrl={output.resolvedUrl}
+                editedImageUrl={editedImageUrls[output.filename]}
+                selected={Boolean(selectedMap[output.filename])}
+                level={weaponMetadata[output.filename]?.level || ''}
+                pkMode={weaponMetadata[output.filename]?.pkMode || 'none'}
+                onLevelChange={handleLevelChange}
+                onPkModeChange={handlePkModeChange}
+                onEditedImageChange={handleEditedImageChange}
+                onToggleSelected={() => toggleSelected(output.filename)}
+                suppressLightboxRef={suppressLightboxRef}
+              />
+            ) : (
+              <StandardResultCard
+                key={idx}
+                output={output}
+                imageUrl={output.resolvedUrl}
+                selected={Boolean(selectedMap[output.filename])}
+                onToggleSelected={() => toggleSelected(output.filename)}
+                suppressLightboxRef={suppressLightboxRef}
+              />
+            )
+          ))}
         </div>
       </div>
 

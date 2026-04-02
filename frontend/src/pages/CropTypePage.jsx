@@ -53,7 +53,9 @@ export default function CropTypePage({
   helmetPreset = DEFAULT_HELMET_PRESET_ID,
   setHelmetPreset,
   customGrid,
-  setCustomGrid
+  setCustomGrid,
+  detectLevel = false,
+  setDetectLevel,
 }) {
   const navigate = useNavigate();
   const getActivePresetId = (
@@ -274,6 +276,31 @@ export default function CropTypePage({
               );
             })}
           </div>
+
+          <div style={{ marginTop: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
+            <label style={{
+              display: 'flex', alignItems: 'center', gap: '0.6rem',
+              cursor: 'pointer', fontSize: '0.95rem',
+              padding: '0.7rem 1.2rem',
+              borderRadius: '0.75rem',
+              border: detectLevel ? '2px solid #ffc107' : '1px solid var(--border)',
+              background: detectLevel ? 'rgba(255, 193, 7, 0.12)' : 'var(--bg-card)',
+              transition: 'all 0.2s ease',
+            }}>
+              <input
+                type="checkbox"
+                checked={detectLevel}
+                onChange={(e) => setDetectLevel(e.target.checked)}
+                style={{ width: 18, height: 18, accentColor: '#ffc107', cursor: 'pointer' }}
+              />
+              <span>🏆 Hiển thị cấp súng (Lv)</span>
+            </label>
+          </div>
+          {detectLevel && (
+            <p style={{ color: '#ffc107', fontSize: '0.8rem', marginTop: '0.5rem', textAlign: 'center' }}>
+              Hệ thống sẽ dùng OCR để đọc cấp súng từ tiêu đề ảnh và vẽ badge Lv lên mỗi ảnh cắt.
+            </p>
+          )}
         </div>
       )}
 
@@ -323,10 +350,10 @@ export default function CropTypePage({
           </div>
         </div>
       )}
-      
+
       <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-        <button 
-          className="btn btn-ghost" 
+        <button
+          className="btn btn-ghost"
           onClick={() => setShowAdjust(!showAdjust)}
           style={{ border: '1px solid var(--border)' }}
         >
@@ -366,10 +393,10 @@ export default function CropTypePage({
               ? 'Đang dùng toạ độ đã lưu cho tất cả ảnh cùng loại cắt này.'
               : 'Chưa có toạ độ lưu sẵn. Nếu bấm lưu, lần sau hệ thống sẽ tự áp dụng.'}
           </p>
-          
+
           <div style={{ position: 'relative', width: '100%', maxWidth: '800px', margin: '0 auto 2rem', overflow: 'hidden', borderRadius: '8px' }}>
             <img src={sampleImageStr} alt="Preview" style={{ width: '100%', height: 'auto', display: 'block' }} />
-            
+
             <div style={{
               position: 'absolute',
               top: 0, left: 0, right: 0, bottom: 0,
@@ -387,23 +414,23 @@ export default function CropTypePage({
               }} />
             </div>
           </div>
-          
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', maxWidth: '600px', margin: '0 auto' }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '0.85rem' }}>
               X (Trục ngang): {grid.x_ratio.toFixed(2)}
-              <input type="range" min="0" max="1" step="0.005" value={grid.x_ratio} onChange={e => setGrid({...grid, x_ratio: parseFloat(e.target.value)})} />
+              <input type="range" min="0" max="1" step="0.005" value={grid.x_ratio} onChange={e => setGrid({ ...grid, x_ratio: parseFloat(e.target.value) })} />
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '0.85rem' }}>
               W (Độ rộng): {grid.w_ratio.toFixed(2)}
-              <input type="range" min="0" max="1" step="0.005" value={grid.w_ratio} onChange={e => setGrid({...grid, w_ratio: parseFloat(e.target.value)})} />
+              <input type="range" min="0" max="1" step="0.005" value={grid.w_ratio} onChange={e => setGrid({ ...grid, w_ratio: parseFloat(e.target.value) })} />
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '0.85rem' }}>
               Y (Trục dọc): {grid.y_ratio.toFixed(2)}
-              <input type="range" min="0" max="1" step="0.005" value={grid.y_ratio} onChange={e => setGrid({...grid, y_ratio: parseFloat(e.target.value)})} />
+              <input type="range" min="0" max="1" step="0.005" value={grid.y_ratio} onChange={e => setGrid({ ...grid, y_ratio: parseFloat(e.target.value) })} />
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '0.85rem' }}>
               H (Độ cao): {grid.h_ratio.toFixed(2)}
-              <input type="range" min="0" max="1" step="0.005" value={grid.h_ratio} onChange={e => setGrid({...grid, h_ratio: parseFloat(e.target.value)})} />
+              <input type="range" min="0" max="1" step="0.005" value={grid.h_ratio} onChange={e => setGrid({ ...grid, h_ratio: parseFloat(e.target.value) })} />
             </label>
           </div>
         </div>

@@ -5,8 +5,9 @@ import os
 import io
 import zipfile
 
-from schemas import ProcessRequest, ProcessResponse, OutputInfo, DownloadZipRequest
+from schemas import ProcessRequest, ProcessResponse, OutputInfo, DownloadZipRequest, MergeRequest
 from services.processor import process_multiple
+from services.composer import merge_images_vertically
 
 
 router = APIRouter(prefix="/api", tags=["process"])
@@ -28,6 +29,7 @@ async def process_images(request: ProcessRequest):
         crop_type=request.crop_type,
         outfit_preset=request.outfit_preset,
         custom_grid=request.custom_grid,
+        detect_level=request.detect_level,
     )
     
     outputs = []
@@ -42,7 +44,8 @@ async def process_images(request: ProcessRequest):
                 source_name=result["source_name"],
                 url=f"/api/outputs/{result['filename']}",
                 width=result["width"],
-                height=result["height"]
+                height=result["height"],
+                detected_level=result.get("detected_level"),
             ))
     
     message = f"Processed {len(outputs)} image(s)"
@@ -102,3 +105,31 @@ async def list_templates():
                 })
     
     return {"templates": templates}
+
+
+@router.post("/merge-vertical", response_model=OutputInfo)
+async def merge_vertical(request: MergeRequest):
+    """
+    Merge multiple output images vertically.
+    """
+    if not request.filenames:
+        raise HTTPException(status_code=400, detail="No filenames provided")
+    
+    merged_filename = merge_images_vertically(request.filenames, OUTPUT_DIR)
+    
+    if not merged_filename:
+        raise HTTPException(status_code=500, detail="Failed to merge images")
+    
+    # Get dimensions
+    from PIL import Image
+    img_path = os.path.join(OUTPUT_DIR, merged_filename)
+    with Image.open(img_path) as img:
+        width, height = img.size
+        
+    return OutputInfo(
+        filename=merged_filename,
+        source_name="merged_showcase.jpg",
+        url=f"/api/outputs/{merged_filename}",
+        width=width,
+        height=height
+    )

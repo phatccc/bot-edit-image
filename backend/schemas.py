@@ -29,6 +29,7 @@ class ProcessRequest(BaseModel):
     crop_type: str = "outfit"  # "outfit" or "weapon"
     outfit_preset: Optional[str] = None
     custom_grid: Optional[CustomRegion] = None
+    detect_level: bool = False
 
 
 class OutputInfo(BaseModel):
@@ -37,6 +38,7 @@ class OutputInfo(BaseModel):
     url: str
     width: int
     height: int
+    detected_level: Optional[str] = None
 
 
 class ProcessResponse(BaseModel):
@@ -45,6 +47,10 @@ class ProcessResponse(BaseModel):
 
 
 class DownloadZipRequest(BaseModel):
+    filenames: List[str]
+
+
+class MergeRequest(BaseModel):
     filenames: List[str]
 
 

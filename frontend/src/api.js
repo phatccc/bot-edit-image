@@ -40,22 +40,24 @@ export const processImages = async (
   templateName = 'default',
   cropType = 'outfit',
   customGrid = null,
-  outfitPreset = null
+  outfitPreset = null,
+  detectLevel = false
 ) => {
   const payload = {
     filenames,
     template: templateName,
-    crop_type: cropType
+    crop_type: cropType,
+    detect_level: detectLevel,
   };
 
   if (outfitPreset) {
     payload.outfit_preset = outfitPreset;
   }
-  
+
   if (customGrid) {
     payload.custom_grid = customGrid;
   }
-  
+
   const response = await api.post('/process', payload);
   return response.data;
 }
@@ -64,7 +66,7 @@ export async function downloadZip(filenames) {
   const response = await api.post('/download-zip', { filenames }, {
     responseType: 'blob',
   });
-  
+
   const url = window.URL.createObjectURL(new Blob([response.data]));
   const link = document.createElement('a');
   link.href = url;
@@ -77,6 +79,11 @@ export async function downloadZip(filenames) {
 
 export async function getTemplates() {
   const response = await api.get('/templates');
+  return response.data;
+}
+
+export async function mergeVerticalImages(filenames) {
+  const response = await api.post('/merge-vertical', { filenames });
   return response.data;
 }
 
