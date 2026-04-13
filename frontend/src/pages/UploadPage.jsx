@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { uploadImages } from '../api';
 
@@ -10,6 +10,17 @@ export default function UploadPage({ uploadedFiles, setUploadedFiles }) {
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
+
+  const localPreviewUrls = useMemo(
+    () => localFiles.map((file) => URL.createObjectURL(file)),
+    [localFiles]
+  );
+
+  useEffect(() => {
+    return () => {
+      localPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [localPreviewUrls]);
 
   const handleFiles = useCallback((files) => {
     const imageFiles = Array.from(files).filter((f) =>
@@ -146,7 +157,12 @@ export default function UploadPage({ uploadedFiles, setUploadedFiles }) {
           <div className="preview-grid">
             {localFiles.map((file, idx) => (
               <div className="preview-card" key={idx}>
-                <img src={URL.createObjectURL(file)} alt={file.name} />
+                <img
+                  src={localPreviewUrls[idx]}
+                  alt={file.name}
+                  loading="lazy"
+                  decoding="async"
+                />
                 <div className="preview-card-info">
                   <div className="preview-card-name">{file.name}</div>
                   <div className="preview-card-meta">{formatSize(file.size)}</div>

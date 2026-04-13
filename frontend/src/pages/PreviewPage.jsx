@@ -104,7 +104,12 @@ export default function PreviewPage({
       <div className="preview-grid">
         {uploadedFiles.map((file, idx) => (
           <div className="preview-card" key={idx}>
-            <img src={file.preview_url || resolveApiUrl(file.url)} alt={file.original_name} />
+            <img
+              src={file.preview_url || resolveApiUrl(file.url)}
+              alt={file.original_name}
+              loading="lazy"
+              decoding="async"
+            />
             <div className="preview-card-info">
               <div className="preview-card-name">{file.original_name}</div>
               <div className="preview-card-meta">
